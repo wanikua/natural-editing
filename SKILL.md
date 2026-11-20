@@ -68,7 +68,7 @@ Expect the result to be shorter. A rewrite as long as a padded draft has kept th
 ## Three passes, all required
 
 1. **Rewrite** with everything above.
-2. **Audit**, privately. `scripts/scan.py` sits beside this file. If you can run a shell, save the draft to a temporary file and run `python3 <this skill's folder>/scripts/scan.py <file>`, or pipe the text in. Without a shell, check the draft against the tables yourself. Either way, reread as a sceptical reader for what no regex sees: the paragraph shapes above, and whether anyone seems to be speaking.
+2. **Audit**, privately. `scripts/scan.py` sits beside this file. If you can run a shell, save the draft to a temporary file and run `python3 <this skill's folder>/scripts/scan.py <file>`, or pipe the text in. It skips blockquotes and code, so save the draft as plain text. Without a shell, check the draft against the tables yourself. Either way, reread as a sceptical reader for what no regex sees: the paragraph shapes above, and whether anyone seems to be speaking.
 3. **Fix** what the audit found and scan again. Exit code 1 only means there are hits to look at. Any hit you leave must be one you can defend, such as a quoted source or a term of art.
 
 Then check your fact list. Nothing lost, nothing added.

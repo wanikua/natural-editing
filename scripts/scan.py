@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Flag machine-writing tells in English or Chinese text.
 
-usage: scan.py [file ...]      reads stdin when no file is given
+usage: scan.py [--all] [file ...]      reads stdin when no file is given
 exit:  0 = clean, 1 = hits
 
 A hit is a reason to look at the line, never proof. Fenced code is skipped.
+So are inline code and Markdown blockquotes, which usually quote someone
+else's words. Pass --all to scan those too.
 """
 import re
 import statistics
@@ -30,7 +32,7 @@ ZH = {
     "vocab": r"必不可少|不可或缺|错综复杂|值得注意的是|与此同时|同样地|旨在|致力于|全景|底层逻辑|颗粒度|对齐|打法|心智|破局|沉淀|反哺|抓手|闭环|维度|格局|生态|组合拳|最后一公里|定海神针|的(?:关键|核心)(?![一-鿿])|(?:关键|核心)(?:一步|所在|亮点|价值|优势|竞争力)|深入(?:利用|探讨|挖掘|剖析|了解)|(?:^|[。！？\n])此外",
     "copula": r"充当|构成了|代表着|被视为|被誉为|堪称|扮演着?.{0,8}角色|作为.{1,12}的存在",
     "negation": r"不是.{1,30}而是|并非.{1,30}而是|不只是|不仅仅是|不仅.{1,30}(?:而且|更|还)|无需.{1,20}只需|毫不费力|不费吹灰之力",
-    "threes": r"首先.{1,200}其次|第一.{1,80}第二.{1,80}第三|[一-鿿]{2,4}、[一-鿿]{2,4}、[一-鿿]{2,4}(?![、一-鿿]{0,6}、)",
+    "threes": r"首先.{1,200}其次|第一.{1,80}第二.{1,80}第三|(?<!、)[一-鿿]{2,4}、[一-鿿]{2,4}、[一-鿿]{2,4}(?![、一-鿿]{0,6}、)",
     "passive": r"需要被|应当被|应该被|被广泛|得到了?(?:广泛)?(?:应用|认可|关注)|进行了?(?:配置|优化|处理|分析|探讨|升级|重构)",
     "chatbot": r"希望(?:这)?(?:能)?对[你您]有(?:所)?帮助|很棒的问题|好问题|总而言之|总的来说|综上所述|为了总结|期待[你您]的回复|未来充满希望|未来可期|拭目以待|欢迎随时|一直以来的支持|在一定程度上|或许可能",
     "framing": r"本质上|归根结底|从某种意义上说?|某种程度上|不可否认|毫无疑问|不难发现|由此可见|的背景下|那么问题来了|果真如此吗|答案是(?:显而易见|肯定|否定)的|究竟意味着什么",
@@ -51,6 +53,11 @@ def strip_code(text):
     return re.sub(r"```.*?```", lambda m: "\n" * m.group().count("\n"), text, flags=re.S)
 
 
+def strip_quoted(text):
+    text = re.sub(r"^[ \t]*>.*$", "", text, flags=re.M)
+    return re.sub(r"`[^`\n]+`", lambda m: " " * len(m.group()), text)
+
+
 def rhythm(text):
     """Return a message when sentence lengths barely vary, else None."""
     zh = len(CJK.findall(text)) > len(text) * 0.2
@@ -66,8 +73,10 @@ def rhythm(text):
     return None
 
 
-def scan(text):
+def scan(text, quoted=False):
     text = strip_code(text)
+    if not quoted:
+        text = strip_quoted(text)
     hits = []
     for table, flags in ((EN, re.I | re.M), (ZH, re.M), (FORMAT, re.M)):
         for family, pattern in table.items():
@@ -83,11 +92,13 @@ def scan(text):
     return sorted(hits)
 
 
-def main(paths):
+def main(args):
+    quoted = "--all" in args
+    paths = [a for a in args if a != "--all"]
     sources = [(p, open(p, encoding="utf-8").read()) for p in paths] or [("stdin", sys.stdin.read())]
     total = 0
     for name, text in sources:
-        hits = scan(text)
+        hits = scan(text, quoted)
         total += len(hits)
         for line, family, shown in hits:
             where = f"{name}:{line}" if line else name
